@@ -760,7 +760,7 @@ class WeiboTool(object):
 
             # 链接
             comment_link_ele = comment_div.xpath("./div[@class='WB_text']/a/@alt")
-            comment_link = ""
+            real_comment_link = ""
             if comment_link_ele:
                 comment_link = comment_link_ele[0]
                 real_comment_link = comment_link
@@ -1382,7 +1382,7 @@ if __name__ == '__main__':
             if not is_b_later_than_a(div["public_timestamp"], update_start_time):
                 saved_divs = saved_divs[:saved_divs.index(div) + 1]
                 break
-        
+
         input_str = input("确认删除result.json中 {} 之后文件(输入 yes 确认，或其他以退出)\n".format(config["update_start_time"]))
         if input_str == "yes":
             update_json_file(saved_divs, result_filename)
