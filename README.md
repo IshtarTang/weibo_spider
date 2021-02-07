@@ -169,13 +169,9 @@ download_img：如果要保存微博里的图片， 如果要保存微博里的�
 
 
 
-下载会产生文件download.json，里面是微博的html，会比较大一点，我的微博一共是6000条，80m。程序运行完可以手动删除。
 
-schedule.json是进度文件，如果要运行增量模式或者更新模式（具体在后面），需要先把这个文件删除再启动。
 
-解析产生result.json和r_result.json，内容上面有描述。
 
-![1612582888638](笔记图/简述/1612582888638.png)
 
 #### <a name="5">运行</a><a style="float:right;text-decoration:none;" href="#index">[Top]</a>
 
@@ -189,10 +185,11 @@ schedule.json是进度文件，如果要运行增量模式或者更新模式（�
 
 里面会有四个文件
 
-![1612434797994](笔记图/简述/1612434797994.png)
+![1612582888638](笔记图/file_with_toc/1612582888638.png)
 
-download.json：为下载的微博网页文件，不用动，程序运行完后可以删除
-schedule.json：程序进度文件，不用动
+download.json：为下载的微博网页文件，不用动。里面是微博的html，会比较大一点，我的微博一共是6000条，80m。程序运行完可以手动删除。
+
+schedule.json：程序进度文件。如果要运行增量模式或者更新模式（具体见可选项配置），需要先把这个文件删除再启动。
 
 **result.json**：结果文件，存放要爬取的用户的微博，p1存成p2这样
 
@@ -224,9 +221,11 @@ schedule.json：程序进度文件，不用动
 
 如果你要爬的博主评论数都非常多（都超过1000）的话，不建议开，因为微博的评论获取是每15条一组，一组要发一次请求，非常耗时间。而且我并没有给评论获取设中断保存机制，爬评论的过程中断的话得从头开始爬。
 
+.
 
 
-additional_user_ids：
+
+**additional_user_ids**
 
 除了当前用户外，还有哪些用户微博下的评论是需要全部爬取的。
 
@@ -235,7 +234,11 @@ list格式，列表中应为str
 在开了get_all_comment时，只有user_id用户发的微博下的评论是会全部保存的。
 如果你希望该用户转发微博的源微博下的评论也能全部保存，那么把源微博博主的id放进来，这个博主源微博的评论就会全部保存。
 
+![1612685868249](笔记图/file_with_toc/1612685868249.png)
+
 （为什么不能直设成保存所有源微博的评论？因为指不定就转过那种评论过百万条的微博，像是李医生那条，会极其耗时还不一定爬得完）
+
+.
 
 
 
@@ -250,6 +253,8 @@ list格式，列表中应为str
 运行前需删除上一次的进度文件（schedule.json）
 
 ![1612619342892](笔记图/简述/1612619342892.png)
+
+.
 
 
 
@@ -269,11 +274,13 @@ list格式，列表中应为str
 
 注意：auto_get_increment功能需要用到start_time和stop_time，且优先级高于手动设置的start_time和stop_time，如果同时开了auto_get_increment，设置的start_time和stop_time会被覆盖掉。
 
+.
+
 
 
 **update_mode & update_start_time**
 
-更新模式，需指定update_start_time
+更新模式，1启动，0关闭。需指定update_start_time，update_start_time格式同start_time。
 
 会删除时间晚于update_start_time的内容，并重新获取这一部分
 
@@ -284,6 +291,8 @@ update_start_time早于start_time时，更新范围为(start_time,stop_time]。�
 跟增量模式冲突，不可同时启用。
 
 这个模式本来是用来更新评论的，但是时间不够了，就粗糙地做了个这个出来。
+
+.
 
 
 
