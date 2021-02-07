@@ -763,7 +763,12 @@ class WeiboTool(object):
             comment_link = ""
             if comment_link_ele:
                 comment_link = comment_link_ele[0]
-            comment_info["comment_link"] = comment_link
+                real_comment_link = comment_link
+                try:
+                    real_comment_link = session.get(comment_link).url
+                except:
+                    pass
+            comment_info["comment_link"] = real_comment_link
 
             a_group_comment_info.append(comment_info)
 
@@ -1289,20 +1294,20 @@ if __name__ == '__main__':
                 邮箱：18975585675@163.com
             评论更新和存储到mysql的功能未完成，近期内应该不会有空
             程序卡住了可以直接关闭然后重新启动，会从上次的进度开始运行
-            
+
             不得以任何形式使用该程序获利
-            
+
             按'是'以开始运行本程序，或按'否'退出
-            
+
     """
 
     tmp_str = messagebox.askquestion("提示信息", info)
-
     window.destroy()
     if tmp_str == "no":
         print("程序退出")
         time.sleep(3)
         exit()
+
     config_filename = "./config.json"
     schedule_filename_base = "./{}/schedule.json"
     download_filename_base = "./{}/download.json"
@@ -1366,17 +1371,19 @@ if __name__ == '__main__':
             print("已清除上次的下载文件")
 
     # 启动了更新模式，且进度为0
-    if config["update_mode"] and schedule["downloaded"]:
+    if config["update_mode"] and schedule["downloaded"] == 0:
         print("更新模式已打开")
         update_start_time = config["update_start_time"]
         saved_divs = read_json(result_filename)
-
+        print("清除上次的下载文件")
+        update_json_file([], download_filename)
         for div in saved_divs:
             # saved_divs为从早到晚，start_time 比 div的时间早时，截断
             if not is_b_later_than_a(div["public_timestamp"], update_start_time):
                 saved_divs = saved_divs[:saved_divs.index(div) + 1]
                 break
-        input_str = input("确认删除result.json {} 之后文件(输入 yes 确认，或其他以退出)\n".format(config["update_start_time"]))
+        
+        input_str = input("确认删除result.json中 {} 之后文件(输入 yes 确认，或其他以退出)\n".format(config["update_start_time"]))
         if input_str == "yes":
             update_json_file(saved_divs, result_filename)
             print("已删除 {} 之后的微博文件".format(config["update_start_time"]))
@@ -1427,7 +1434,7 @@ if __name__ == '__main__':
     update_mode_str = is_on(config["update_mode"])
     if config["update_mode"]:
         update_start_time = config["update_start_time"]
-        update_start_time = update_start_time if type(update_start_time) else timestamp_to_str(update_start_time)
+        update_start_time = update_start_time if type(update_start_time) == str else timestamp_to_str(update_start_time)
         update_time_range = "{} - {}".format(update_start_time, stop_time)
     else:
         update_time_range = "/"
