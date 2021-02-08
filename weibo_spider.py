@@ -1162,7 +1162,7 @@ def get_user_ident(config, session):
     """
     user_id = config["user_id"]
     base_url = "https://weibo.com/{}?page=1&is_all=1".format(user_id)
-    user_name = ""
+    count = 0
     while True:
         try:
             first_part_response = session.get(base_url)
@@ -1174,6 +1174,8 @@ def get_user_ident(config, session):
             user_name = parse.xpath("//div[contains(@class,'WB_info')]/a/text()")[0]
             if user_name:
                 break
+            if count % 3 == 0:
+                time.sleep(3)
         except:
             pass
 
