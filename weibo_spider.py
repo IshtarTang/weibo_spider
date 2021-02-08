@@ -283,17 +283,44 @@ class WeiboTool(object):
         # 赞  评论 转发
         forward_comment_like_ele = parse.xpath(".//span[@class='line S_line1']/a/span//em[last()]/text()")
         # 肯定有转发，不用判断
-        forward_num = int(forward_comment_like_ele[0])
-        comment_ele = forward_comment_like_ele[1]
-        if "评论" not in comment_ele:
-            comment_num = int(comment_ele)
+        forward_num_str = forward_comment_like_ele[0]
+        try:
+            forward_num = int(forward_num_str)
+        except:
+            if "万" in forward_num_str:
+                forward_num = int(forward_num_str.split("万")[0]) * 10000
+                remark += "\t 转发数过大，获取到的字符串为：{}".format(forward_num_str)
+            else:
+                forward_num = -1
+                remark += "\t 转发数异常，获取到的字符串为：{}".format(forward_num_str)
+
+        comment_num_str = forward_comment_like_ele[1]
+        if comment_num_str != "评论":
+            try:
+                comment_num = int(comment_num_str)
+            except:
+                if "万" in comment_num_str:
+                    comment_num = int(comment_num_str.split("万")[0]) * 10000
+                    remark += "\t 评论数过大，获取到的字符串为：{}".format(comment_num_str)
+                else:
+                    comment_num = -1
+                    remark += "\t 评论数异常，获取到的字符串为：{}".format(comment_num_str)
         else:
             comment_num = 0
-        like_ele = forward_comment_like_ele[2]
-        if "赞" not in like_ele:
-            like_num = int(like_ele)
+        like_num_str = forward_comment_like_ele[2]
+        if like_num_str != "赞":
+            try:
+                like_num = int(like_num_str)
+            except:
+                if "万" in like_num_str:
+                    like_num = int(like_num_str.split("万")[0]) * 10000
+                    remark += "\t 点赞数过大，获取到的字符串为：{}".format(like_num_str)
+                else:
+                    like_num = -1
+                    remark += "\t 点赞数异常，获取到的字符串为：{}".format(like_num_str)
         else:
             like_num = 0
+
         # 调这个方法的绝对是原创公开微博，且获取不到评论
         is_original = 1
         share_scope = "公开"
@@ -425,7 +452,16 @@ class WeiboTool(object):
         if forward_num_ele:
             forward_num_str = forward_num_ele[1]
             if forward_num_str != "转发":
-                forward_num = int(forward_num_str)
+                try:
+                    forward_num = int(forward_num_str)
+                except:
+                    if "万" in forward_num_str:
+                        forward_num = int(forward_num_str.split("万")[0]) * 10000
+                        remark += "\t 转发数过大，获取到的字符串为：{}".format(forward_num_str)
+                    else:
+                        forward_num = -1
+                        remark += "\t 转发数异常，获取到的字符串为：{}".format(forward_num_str)
+
         # 评论数
         comment_num_str = parse.xpath(".//span[@node-type='comment_btn_text']//text()")[1]
         if comment_num_str != "评论":
@@ -434,9 +470,10 @@ class WeiboTool(object):
             except:
                 if "万" in comment_num_str:
                     comment_num = int(comment_num_str.split("万")[0]) * 10000
+                    remark += "\t 评论数过大，获取到的字符串为：{}".format(comment_num_str)
                 else:
                     comment_num = -1
-                remark += "\t 评论数异常，获取到的字符串为：{}".format(comment_num_str)
+                    remark += "\t 评论数异常，获取到的字符串为：{}".format(comment_num_str)
         else:
             comment_num = 0
         # 点赞数
@@ -445,7 +482,15 @@ class WeiboTool(object):
         like_num_ele = parse.xpath(".//span[@node-type='like_status']")[my_like_index]
         like_num_str = like_num_ele.xpath(".//text()")[-1]
         if like_num_str != "赞":
-            like_num = int(like_num_str)
+            try:
+                like_num = int(like_num_str)
+            except:
+                if "万" in like_num_str:
+                    like_num = int(like_num_str.split("万")[0]) * 10000
+                    remark += "\t 点赞数过大，获取到的字符串为：{}".format(like_num_str)
+                else:
+                    like_num = -1
+                    remark += "\t 点赞数异常，获取到的字符串为：{}".format(like_num_str)
         else:
             like_num = 0
 
@@ -1175,6 +1220,7 @@ def get_user_ident(config, session):
             if user_name:
                 break
             if count % 3 == 0:
+                print("已获取失败 {} 次".format(count))
                 time.sleep(3)
         except:
             pass
@@ -1330,7 +1376,7 @@ if __name__ == '__main__':
     session.cookies.update(cookies)
 
     # 存储文件名
-    print("获取用户标识")
+    print("获取用户标识，请稍等（如果长时间卡住请尝试更新cookies或重启程序）")
     user_ident = get_user_ident(config, session)
     # 有指定时间时，文件夹名会带时间
     if config["stop_time"] or (
