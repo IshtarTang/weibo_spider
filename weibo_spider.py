@@ -685,7 +685,7 @@ class WeiboTool(object):
             if flag:
                 next_url = sub_comment_parse.xpath("//div[@node-type='comment_loading']/@action-data")
             else:
-                next_url = sub_comment_parse.xapth("//a[contains(@class,'page next')]/span/@action-data")
+                next_url = sub_comment_parse.xpath("//a[contains(@class,'page next')]/span/@action-data")
             if not next_url:
                 next_url = sub_comment_parse.xpath("//a[@action-type='click_more_comment']/@action-data")
         print("共获取到评论 {} 条，其中root评论 {} 条".format(all_comment_count, root_comment_count))
@@ -1071,7 +1071,7 @@ def download_weibo_file(config, session, schedule_filename, download_filename):
         if stop_time:
             earliest_div = page_divs[-1]
             # 最早的微博晚于stop_time，跳过该页
-            earliest_public_timestamp = earliest_div.xapth("//div[contains(@class,'WB_from')]/a/@date")[0]
+            earliest_public_timestamp = earliest_div.xpath("//div[contains(@class,'WB_from')]/a/@date")[0]
             if not is_b_later_than_a(earliest_public_timestamp, stop_time):
                 print("第{}页微博不在指定时间范围内 - stop_time".format(page))
                 continue
