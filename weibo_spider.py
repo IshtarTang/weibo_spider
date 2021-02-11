@@ -1038,7 +1038,7 @@ def download_weibo_file(config, session, schedule_filename, download_filename):
             if exception_count != 0 and exception_count % 3 == 0:
                 time.sleep(8)
             # 超过3次正常请求数量不够,说明这页就这么多，微博的错，或者是最后一页，直接跳出循环
-            if flag > 6 and max_div_num == page_div_num:
+            if flag > 4 and max_div_num == page_div_num:
                 print("{}页确实就这么多".format(page))
                 break
 
@@ -1071,9 +1071,9 @@ def download_weibo_file(config, session, schedule_filename, download_filename):
         if stop_time:
             earliest_div = page_divs[-1]
             # 最早的微博晚于stop_time，跳过该页
-            earliest_public_timestamp = earliest_div.xpath("//div[contains(@class,'WB_from')]/a/@date")[0]
-            if not is_b_later_than_a(earliest_public_timestamp, stop_time):
-                print("第{}页微博不在指定时间范围内 - stop_time".format(page))
+            earliest_public_timestamp = int(earliest_div.xpath("//div[contains(@class,'WB_from')]/a/@date")[0])
+            if is_b_later_than_a(stop_time, earliest_public_timestamp):
+                print("第{}页微博不在指定时间范围内 - later than stop_time".format(page))
                 continue
         if start_time:
             # 如果有置顶的话，选择第二条作为最晚div
@@ -1084,8 +1084,8 @@ def download_weibo_file(config, session, schedule_filename, download_filename):
                 newest_div = page_divs[0]
             newest_public_timestamp = int(newest_div.xpath(".//div[contains(@class,'WB_from')]/a/@date")[0])
             # 该页最晚(新)的微博 早于/等于start_time,直接跳出循环
-            if is_b_later_than_a(newest_public_timestamp, start_time):
-                print("第{}页微博不在指定时间范围内 - start_time".format(page))
+            if not is_b_later_than_a(start_time, newest_public_timestamp):
+                print("第{}页微博不在指定时间范围内 - early than start_time".format(page))
                 print("已获取到指定时间内的所有微博")
                 break
 
@@ -1119,6 +1119,8 @@ def parse_weibo(session, weibo_divs, config, schedule_filename, result_filename)
     r_weibo_list = read_json(r_result_filename)
     weibo_tool1 = WeiboTool()
     to_parse = len(weibo_divs) - 1 - parse_schedule
+    this_parsed_weibo_num = schedule["this_parsed_weibo"]
+    this_parsed_r_weibo_num = schedule["this_parsed_r_weibo"]
     if weibo_list:
         print("读取到上次解析的微博 {} 条".format(len(weibo_list)))
     # 从早到晚保存的
@@ -1129,9 +1131,12 @@ def parse_weibo(session, weibo_divs, config, schedule_filename, result_filename)
         weibo1 = weibo_tool1.parse_weibo_from_div(div, session, config)
         public_time = weibo1.public_time
 
+        # 该次保存的微博条数在这里更新一次，保证如果该条微博不在保存范围内，文件也能正确刷新（如果在过滤条件里刷新要重复写好几次）
+        config["this_parsed_weibo"] = this_parsed_weibo_num
+        config["this_parsed_r_weibo"] = this_parsed_r_weibo_num
+
         # 过滤，包括等于stop_time的，不报错等于start_time的
         # 顺序是从早到晚
-        # start_time = config["start_time"]
         start_time = config["update_start_time"] if config["update_mode"] else config["start_time"]
         stop_time = config["stop_time"]
         if stop_time:
@@ -1139,7 +1144,7 @@ def parse_weibo(session, weibo_divs, config, schedule_filename, result_filename)
                 # 微博晚于stop_time，且非置顶,直接跳出循环
                 if "置顶" not in weibo1.content:
                     print("已解析指定时间范围内所有微博，解析结束")
-                    # 更新文件后直接退出
+                    # 更新文件后直接退出newest_public_timestamp
                     parse_schedule = len(weibo_divs)
                     schedule["parsed"] = parse_schedule
                     update_json_file(schedule, schedule_filename)
@@ -1148,7 +1153,7 @@ def parse_weibo(session, weibo_divs, config, schedule_filename, result_filename)
                 else:
                     # 微博晚于stop_time，是置顶,跳过
                     parse_schedule += 1
-                    print("该微博不在指定时间范围内")
+                    print("该微博不在指定时间范围内 - latet than stop_time")
                     print("解析进度 {}/{}".format(parse_schedule, len(weibo_divs)))
 
                     # 文件刷新
@@ -1161,7 +1166,7 @@ def parse_weibo(session, weibo_divs, config, schedule_filename, result_filename)
             # 微博早于/等于start_time,跳过
             if is_b_later_than_a(public_time, start_time):
                 parse_schedule += 1
-                print("该微博不在指定时间范围内，被过滤掉")
+                print("该微博不在指定时间范围内，被过滤掉 - early than start_time")
                 print("解析进度 {}/{}".format(parse_schedule, len(weibo_divs)))
                 # 文件刷新
                 if parse_schedule % 5 == 0 or parse_schedule == len(weibo_divs) - 1:
@@ -1173,9 +1178,11 @@ def parse_weibo(session, weibo_divs, config, schedule_filename, result_filename)
         # 将微博信息添加到列表
         weibo_info_dict = weibo1.to_dict_with_simple_r_weibo()
         weibo_list.append(weibo_info_dict)
+        this_parsed_weibo_num += 1
         # 如果有转发微博，且不是更新模式
         if weibo1.r_weibo and not config["update_mode"]:
             r_weibo_list.append(weibo1.r_weibo)
+            this_parsed_r_weibo_num += 1
         parse_schedule += 1
         try:
             print("当前微博解析完毕： {}".format(weibo_info_dict))
@@ -1195,7 +1202,8 @@ def parse_weibo(session, weibo_divs, config, schedule_filename, result_filename)
     update_json_file(weibo_list, result_filename)
     print("文件刷新")
 
-    print("解析完成,共计主页微博 {} 条，源微博 {} 条".format(len(weibo_list), len(r_weibo_list)))
+    print("解析完成,本次共保存主页微博 {} 条，源微博 {} 条".format(this_parsed_weibo_num, this_parsed_r_weibo_num))
+    print("文件中总微博条数 {} 条，源微博 {} 条".format(len(weibo_list), len(r_weibo_list)))
 
 
 def get_user_ident(config, session):
@@ -1219,7 +1227,6 @@ def get_user_ident(config, session):
             parse = etree.HTML(html_text)
             user_name = parse.xpath("//div[contains(@class,'WB_info')]/a/text()")[0]
             if user_name:
-                print("")
                 break
             time.sleep(1)
         except:
@@ -1245,7 +1252,10 @@ def check_run_file(user_ident, schedule_filename, download_filename, result_file
         schedule = {
             "downloaded": 0,
             "parsed": 0,
-            "saved": 0
+            "saved": 0,
+            "this_parsed_weibo": 0,
+            "this_parsed_r_weibo": 0,
+
         }
         update_json_file(schedule, schedule_filename)
         print("初始化文件 {}".format(schedule_filename))
@@ -1304,6 +1314,12 @@ def check_config_file(config_filename):
             print('配置项 {} 应为int，或格式为"%Y-%m-%d %H:%M"的str，或空白str,程序退出'.format(key))
             return 1
         if value_type == str:
+            try:
+                int(config[key])
+                print("配置项 {} 要设为时间戳时，应是int，而不是str")
+                return 1
+            except:
+                pass
             # 字符串非空
             if config[key]:
                 time_patten = "%Y-%m-%d %H:%M"
@@ -1382,8 +1398,7 @@ if __name__ == '__main__':
     user_ident = get_user_ident(config, session)
     print("获取成功")
     # 有指定时间时，文件夹名会带时间
-    if config["stop_time"] or (
-            config["start_time"] and not config["auto_get_increment"] and not config["update_mode"]):
+    if (config["stop_time"] or ["start_time"]) and not config["auto_get_increment"]:
         stop_time = config["stop_time"] if config["stop_time"] else "x"
         start_time = config["start_time"] if config["start_time"] else "x"
         if type(start_time) == int:
@@ -1403,6 +1418,7 @@ if __name__ == '__main__':
 
     # auto_get_increment：自动获取上次获取的最后一条时间戳
     if config["auto_get_increment"] and schedule["downloaded"] == 0:
+        print("--------------------------------------------------------------------")
         print("自动获取新微博已打开")
         saved_divs = read_json(result_filename)
         if saved_divs:
@@ -1423,6 +1439,7 @@ if __name__ == '__main__':
 
     # 启动了更新模式，且进度为0
     if config["update_mode"] and schedule["downloaded"] == 0:
+        print("--------------------------------------------------------------------")
         print("更新模式已打开")
         update_start_time = config["update_start_time"]
         saved_divs = read_json(result_filename)
@@ -1493,6 +1510,7 @@ if __name__ == '__main__':
     print_str = print_str_base.format(main_url, user_ident, get_all_comment_str, additional_user_ids,
                                       time_range, auto_get_increment_str, update_mode_str, update_time_range)
     print(print_str)
+    print("--------------------------------------------------------------------")
     if not input("输入ok以继续\n") == "ok":
         print("程序退出")
 
