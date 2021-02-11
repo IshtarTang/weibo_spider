@@ -1132,8 +1132,8 @@ def parse_weibo(session, weibo_divs, config, schedule_filename, result_filename)
         public_time = weibo1.public_time
 
         # 该次保存的微博条数在这里更新一次，保证如果该条微博不在保存范围内，文件也能正确刷新（如果在过滤条件里刷新要重复写好几次）
-        config["this_parsed_weibo"] = this_parsed_weibo_num
-        config["this_parsed_r_weibo"] = this_parsed_r_weibo_num
+        schedule["this_parsed_weibo"] = this_parsed_weibo_num
+        schedule["this_parsed_r_weibo"] = this_parsed_r_weibo_num
 
         # 过滤，包括等于stop_time的，不报错等于start_time的
         # 顺序是从早到晚
