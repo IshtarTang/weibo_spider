@@ -1209,6 +1209,7 @@ def get_user_ident(config, session):
     base_url = "https://weibo.com/{}?page=1&is_all=1".format(user_id)
     count = 0
     while True:
+        count += 1
         try:
             first_part_response = session.get(base_url)
             parse = etree.HTML(first_part_response.content.decode("utf-8"))
@@ -1218,12 +1219,13 @@ def get_user_ident(config, session):
             parse = etree.HTML(html_text)
             user_name = parse.xpath("//div[contains(@class,'WB_info')]/a/text()")[0]
             if user_name:
+                print("")
                 break
-            if count % 3 == 0:
-                print("已获取失败 {} 次".format(count))
-                time.sleep(3)
+            time.sleep(1)
         except:
-            pass
+            if count % 5 == 0:
+                print("已获取失败 {} 次，请检查网络，或尝试更新cookies".format(count))
+                time.sleep(3)
 
     user_ident = "{}[{}]".format(user_name, user_id)
     return user_ident
@@ -1376,8 +1378,9 @@ if __name__ == '__main__':
     session.cookies.update(cookies)
 
     # 存储文件名
-    print("获取用户标识，请稍等（如果长时间卡住请尝试更新cookies或重启程序）")
+    print("获取用户标识，请稍等（如果长时间卡住请尝试重启程序）")
     user_ident = get_user_ident(config, session)
+    print("获取成功")
     # 有指定时间时，文件夹名会带时间
     if config["stop_time"] or (
             config["start_time"] and not config["auto_get_increment"] and not config["update_mode"]):
@@ -1448,8 +1451,8 @@ if __name__ == '__main__':
 获取当该用户全部评论：{}
 其他需获取全部评论的用户id：{}
 
-自动获取新微博：{}
 爬取时间范围为：{}
+自动获取新微博：{}
 
 更新模式：{}
 更新时间范围：{}
@@ -1488,7 +1491,7 @@ if __name__ == '__main__':
         update_time_range = "/"
 
     print_str = print_str_base.format(main_url, user_ident, get_all_comment_str, additional_user_ids,
-                                      auto_get_increment_str, time_range, update_mode_str, update_time_range)
+                                      time_range, auto_get_increment_str, update_mode_str, update_time_range)
     print(print_str)
     if not input("输入ok以继续\n") == "ok":
         print("程序退出")
